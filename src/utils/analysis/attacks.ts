@@ -14,6 +14,7 @@ import {
 } from "@/types";
 import { AttackMovesOptions } from "../types/exchanges";
 import { unfoldMove } from "./legal-moves";
+import { isPromotion } from "../pawns";
 
 /**
  * Returns capturing moves that a piece can make. In check positions
@@ -44,9 +45,13 @@ export function getAttackMoves(
     return [...victims].map(victim => {
         const move: NormalMove = { from: square, to: victim };
 
-        return (opts?.unfold ?? true)
-            ? unfoldMove(position, move)
-            : contextualizeMove(position, move);
+        if (opts?.unfold ?? true) return unfoldMove(position, move);
+
+        const ctxMove = contextualizeMove(position, move, false);
+
+        return isPromotion(position, move)
+            ? { ...ctxMove, promotion: "queen" as const }
+            : ctxMove;
     }).flat() as ContextualCapture[];
 }
 
@@ -97,13 +102,18 @@ export function getAttackers(
         { enforceLegal: opts?.enforceLegal, unfold: false }
     ).map(move => ({ ...move.piece, square: move.from }));
 
-    if (opts?.xray && attackers.length > 0) {
-        for (const attacker of attackers) {
-            if (attacker.role == "king") continue;
+    if (opts?.xray) {
+        const removable = attackers.filter(atk => atk.role != "king");
+
+        for (const attacker of removable) {
             position.board.take(attacker.square);
         }
 
-        attackers.push(...getAttackers(position, square, opts));
+        if (removable.length > 0) attackers.push(
+            ...getAttackers(position, square, opts).filter(xray => (
+                !attackers.some(atk => atk.square == xray.square)
+            ))
+        );
     }
     
     // Add King defender if it was not added due to illegal capture
@@ -113,7 +123,7 @@ export function getAttackers(
         && kingAttacks(allyKing).has(square);
 
     if (needsKingDefender) attackers.push({
-        color: piece.color,
+        color: position.turn,
         role: "king",
         square: allyKing
     });

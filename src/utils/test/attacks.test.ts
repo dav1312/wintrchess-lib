@@ -97,3 +97,71 @@ test((
         { enforceLegal: false }
     )).toHaveLength(1);
 });
+
+test((
+    "k7/8/8/4p3/4K3/8/8/8 w - - 0 1 > "
+    + "king as only attacker of e5 (w/ xray)"
+), ({ task }) => {
+    const position = chessFromFen(task.name.split(" > ")[0]!);
+
+    expect(
+        getAttackers(position, parseSquare("e5"), { xray: true })
+    ).toHaveLength(1);
+});
+
+test((
+    "k7/8/8/8/4P3/4K3/8/8 b - - 0 1 > "
+    + "king as only defender of e4 (w/ xray)"
+), ({ task }) => {
+    const position = chessFromFen(task.name.split(" > ")[0]!);
+
+    expect(
+        getDefenders(position, parseSquare("e4"), { xray: true })
+    ).toHaveLength(1);
+});
+
+test((
+    "7k/8/8/8/8/8/r2Rn3/5K2 w - - 0 1 > "
+    + "king attacker is not duplicated when x-ray makes capture illegal"
+), ({ task }) => {
+    const position = chessFromFen(task.name.split(" > ")[0]!);
+
+    expect(
+        getAttackers(position, parseSquare("e2"), { xray: true })
+    ).toHaveLength(2);
+});
+
+test((
+    "4r2k/8/n7/8/8/8/4B3/4K3 w - - 0 1 > "
+    + "pinned attacker of a6 only counted when no enforce legal"
+), ({ task }) => {
+    const position = chessFromFen(task.name.split(" > ")[0]!);
+
+    expect(getAttackers(position, parseSquare("a6"))).toHaveLength(0);
+    expect(
+        getAttackers(position, parseSquare("a6"), { enforceLegal: false })
+    ).toHaveLength(1);
+});
+
+test((
+    "2r4k/1P6/8/8/8/8/8/K7 w - - 0 1 > "
+    + "pawn attacker of back rank c8"
+), ({ task }) => {
+    const position = chessFromFen(task.name.split(" > ")[0]!);
+
+    expect(getAttackers(position, parseSquare("c8"))).toMatchObject([
+        { color: "white", role: "pawn", square: parseSquare("b7") }
+    ]);
+});
+
+test((
+    "2r4k/1P6/8/8/8/8/8/K7 w - - 0 1 > "
+    + "promoting attack move defaults to queen when not unfolded"
+), ({ task }) => {
+    const position = chessFromFen(task.name.split(" > ")[0]!);
+    const moves = getAttackMoves(position, parseSquare("b7"), { unfold: false });
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]!.promotion).toBe("queen");
+    expect(position.isLegal(moves[0]!)).toBe(true);
+});
