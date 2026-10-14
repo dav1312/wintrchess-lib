@@ -14,6 +14,7 @@ export interface AttackMovesOptions {
      * If attacking moves that are promotions should be unfolded into
      * several move objects for each promotion type. Otherwise, they
      * promote to a queen. Defaults to `true`.
+     */
     unfold?: boolean;
 }
 
